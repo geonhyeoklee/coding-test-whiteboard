@@ -1,12 +1,10 @@
-fn permute(mut nums: Vec<i32>) -> Vec<Vec<i32>> {
+fn permute(nums: Vec<i32>) -> Vec<Vec<i32>> {
     let mut result = Vec::new();
     let path = Vec::new();
     let used = vec![false; nums.len()];
 
     let mut stack = Vec::new();
     stack.push((path, used));
-
-    nums.sort(); // Sort the nums vector
 
     while let Some((path, used)) = stack.pop() {
         if path.len() == nums.len() {
