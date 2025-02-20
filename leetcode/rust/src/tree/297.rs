@@ -21,16 +21,11 @@ impl TreeNode {
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::str::Split;
 
 struct Codec {
   data: String,
 }
 
-/**
- * `&self` means the method takes an immutable reference.
- * If you need a mutable reference, change it to `&mut self` instead.
- */
 impl Codec {
   fn new() -> Self {
     Codec {
@@ -39,9 +34,15 @@ impl Codec {
   }
 
   fn serialize(&mut self, root: Option<Rc<RefCell<TreeNode>>>) -> String {
+    self.data.clear();
+
     Self::serialize_dfs(self, root);
 
-    self.data.to_string()
+    if self.data.is_empty() {
+      return String::new();
+    }
+    // 맨 앞의 쉼표 제거
+    self.data[1..].to_string()
   }
 
   fn serialize_dfs(&mut self, node: Option<Rc<RefCell<TreeNode>>>) {
@@ -60,24 +61,42 @@ impl Codec {
     }
   }
 
-  fn deserialize(&self, data: String) -> Option<Rc<RefCell<TreeNode>>> {
-    let values = data.split(",");
+  fn deserialize(&mut self, data: String) -> Option<Rc<RefCell<TreeNode>>> {
+    if data.is_empty() {
+      return None;
+    }
 
-    Self::deserialize_dfs(self, values)
+    let values: Vec<&str> = data.split(",").collect();
+
+    if values.len() <= 1 {
+      return None;
+    }
+
+    let (node, _) = Self::deserialize_dfs(&values, 0);
+    node
   }
 
-  fn deserialize_dfs(&self, mut values: Split<&str>) -> Option<Rc<RefCell<TreeNode>>> {
-    let val = values.next().unwrap();
+  fn deserialize_dfs(values: &Vec<&str>, index: usize) -> (Option<Rc<RefCell<TreeNode>>>, usize) {
+    if index >= values.len() {
+      return (None, index);
+    }
+
+    let val = values[index];
+    let next_index = index + 1;
 
     if val.eq("None") {
-      None
+      (None, next_index)
     } else {
-      let val = val.to_string().parse::<i32>().unwrap();
+      let val = val.parse::<i32>().unwrap();
       let mut node = TreeNode::new(val);
-      node.left = Self::deserialize_dfs(self, values.clone());
-      node.right = Self::deserialize_dfs(self, values.clone());
 
-      Some(Rc::new(RefCell::new(node)))
+      let (left, left_index) = Self::deserialize_dfs(values, next_index);
+      let (right, right_index) = Self::deserialize_dfs(values, left_index);
+
+      node.left = left;
+      node.right = right;
+
+      (Some(Rc::new(RefCell::new(node))), right_index)
     }
   }
 }
@@ -90,80 +109,62 @@ impl Codec {
  */
 fn main() {}
 
-// Definition for a binary tree node.
-// pub struct Solution;
+#[cfg(test)]
+mod tests {
+  use super::*;
 
-// #[derive(Debug, PartialEq, Eq)]
-// pub struct TreeNode {
-//     pub val: i32,
-//     pub left: Option<Rc<RefCell<TreeNode>>>,
-//     pub right: Option<Rc<RefCell<TreeNode>>>,
-// }
+  fn check_same_tree(a: Option<Rc<RefCell<TreeNode>>>, b: Option<Rc<RefCell<TreeNode>>>) -> bool {
+    match (a, b) {
+      (None, None) => true,
+      (Some(a), Some(b)) => {
+        let a = a.borrow();
+        let b = b.borrow();
+        a.val == b.val
+          && check_same_tree(a.left.clone(), b.left.clone())
+          && check_same_tree(a.right.clone(), b.right.clone())
+      }
+      _ => false,
+    }
+  }
 
-// impl TreeNode {
-//     #[inline]
-//     pub fn new(val: i32) -> Self {
-//         TreeNode {
-//             val,
-//             left: None,
-//             right: None,
-//         }
-//     }
-// }
-// use std::rc::Rc;
-// use std::cell::RefCell;
-// use std::fmt::Write as _;
+  #[test]
+  fn test_serialize_deserialize() {
+    let mut codec = Codec::new();
 
-// struct Codec;
+    // Test case 1: Simple tree
+    let mut root = TreeNode::new(1);
+    let left = TreeNode::new(2);
+    let right = TreeNode::new(3);
+    root.left = Some(Rc::new(RefCell::new(left)));
+    root.right = Some(Rc::new(RefCell::new(right)));
 
-// impl Codec {
-//     fn new() -> Self {
-//         Self {}
-//     }
+    let tree = Some(Rc::new(RefCell::new(root)));
+    let serialized: String = codec.serialize(tree.clone());
+    let deserialized = codec.deserialize(serialized.clone());
 
-//     fn serialize(&self, root: Option<Rc<RefCell<TreeNode>>>) -> String {
-//         let mut out = String::new();
-//         Self::preorder_serialize(root.as_ref().map(|v| v.borrow()).as_deref(), &mut out);
-//         out
-//     }
+    assert!(check_same_tree(tree, deserialized));
 
-//     fn preorder_serialize(node: Option<&TreeNode>, out: &mut String) {
-//         if let Some(node) = node {
-//             writeln!(out, "{}", node.val).unwrap();
-//             Self::preorder_serialize(node.left.as_ref().map(|v| v.borrow()).as_deref(), out);
-//             Self::preorder_serialize(node.right.as_ref().map(|v| v.borrow()).as_deref(), out);
-//         } else {
-//             writeln!(out, "x").unwrap();
-//         }
-//     }
+    // Test case 2: Empty tree
+    let empty_tree: Option<Rc<RefCell<TreeNode>>> = None;
+    let serialized = codec.serialize(empty_tree.clone());
+    let deserialized = codec.deserialize(serialized);
 
-//     fn deserialize(&self, data: String) -> Option<Rc<RefCell<TreeNode>>> {
-//         let mut itr = data.lines().map(|v| v.parse().ok());
-//         Self::preorder_deserialize(&mut itr)
-//     }
+    assert!(check_same_tree(empty_tree, deserialized));
 
-//     fn preorder_deserialize(data: &mut impl Iterator<Item = Option<i32>>) -> Option<Rc<RefCell<TreeNode>>> {
-//         let val = data.next()??;
-//         let left = Self::preorder_deserialize(data);
-//         let right = Self::preorder_deserialize(data);
-//         Some(Rc::new(RefCell::new(TreeNode { val, left, right })))
-//     }
+    // Test case 3: Complex tree
+    let mut root = TreeNode::new(1);
+    let mut left = TreeNode::new(2);
+    let right = TreeNode::new(3);
+    let left_left = TreeNode::new(4);
 
-// }
-// fn main() {
-//   let root = Some(Rc::new(RefCell::new(TreeNode::new(4))));
-//   if let Some(ref node) = root {
-//       node.borrow_mut().left = Some(Rc::new(RefCell::new(TreeNode::new(9))));
-//       node.borrow_mut().right = Some(Rc::new(RefCell::new(TreeNode::new(0))));
-//   }
+    left.left = Some(Rc::new(RefCell::new(left_left)));
+    root.left = Some(Rc::new(RefCell::new(left)));
+    root.right = Some(Rc::new(RefCell::new(right)));
 
-//   let left_root = root.as_ref().unwrap().borrow_mut().left.clone();
-//   if let Some(ref node) = left_root {
-//       node.borrow_mut().left = Some(Rc::new(RefCell::new(TreeNode::new(5))));
-//       node.borrow_mut().right = Some(Rc::new(RefCell::new(TreeNode::new(1))));
-//   }
+    let tree = Some(Rc::new(RefCell::new(root)));
+    let serialized = codec.serialize(tree.clone());
+    let deserialized = codec.deserialize(serialized);
 
-//   let codec = Codec::new();
-//   let data = codec.serialize(root);
-//   codec.deserialize(data);
-// }
+    assert!(check_same_tree(tree, deserialized));
+  }
+}
