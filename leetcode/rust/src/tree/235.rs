@@ -21,6 +21,7 @@ impl TreeNode {
 
 use std::cell::RefCell;
 use std::rc::Rc;
+
 impl Solution {
   pub fn lowest_common_ancestor(
     root: Option<Rc<RefCell<TreeNode>>>,
@@ -58,8 +59,9 @@ impl Solution {
     let mut path_p = Vec::new();
     let mut path_q = Vec::new();
 
-    let mut current = root.clone();
-    while let Some(node) = current {
+    let mut stack = vec![root.clone()];
+
+    while let Some(node) = stack.pop() {
       let node_val = node.borrow().val;
       path_p.push(node.clone());
 
@@ -67,30 +69,33 @@ impl Solution {
         break;
       }
 
-      current = if p_val < node_val {
-        node.borrow().left.clone()
+      if p_val < node_val {
+        stack.push(node.borrow().left.clone());
       } else {
-        node.borrow().right.clone()
-      };
+        stack.push(node.borrow().right.clone());
+      }
     }
 
-    current = root;
-    while let Some(node) = current {
+    stack = vec![root];
+
+    while let Some(node) = stack.pop() {
       let node_val = node.borrow().val;
       path_q.push(node.clone());
 
       if node_val == q_val {
         break;
       }
-      current = if q_val < node_val {
-        node.borrow().left.clone()
+
+      if q_val < node_val {
+        stack.push(node.borrow().left.clone());
       } else {
-        node.borrow().right.clone()
-      };
+        stack.push(node.borrow().right.clone());
+      }
     }
 
     let mut lca = None;
     let min_len = path_p.len().min(path_q.len());
+
     for i in 0..min_len {
       if path_p[i].borrow().val == path_q[i].borrow().val {
         lca = Some(path_p[i].clone());

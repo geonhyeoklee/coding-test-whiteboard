@@ -59,22 +59,21 @@ impl Solution {
     let mut stack = vec![(root, sum)];
 
     while let Some((node, sum)) = stack.pop() {
-      let node = node.unwrap();
-      let borrowed = node.borrow();
-      let sum = sum + borrowed.val;
+      let node = node.unwrap().borrow();
+      let sum = sum + node.val;
 
-      if borrowed.left.is_none() && borrowed.right.is_none() {
+      if node.left.is_none() && node.right.is_none() {
         if sum == target_sum {
           return true;
         }
       }
 
-      if borrowed.left.is_some() {
-        stack.push((borrowed.left.clone(), sum));
+      if node.left.is_some() {
+        stack.push((node.left.clone(), sum));
       }
 
-      if borrowed.right.is_some() {
-        stack.push((borrowed.right.clone(), sum));
+      if node.right.is_some() {
+        stack.push((node.right.clone(), sum));
       }
     }
 

@@ -74,7 +74,7 @@ impl Solution {
           stack.push(left);
         }
       } else {
-        stack.pop(); // 현재 노드를 스택에서 제거
+        stack.pop(); // 현재 노드를 스택에서 제거하여 사용
         let node = node.borrow();
 
         // 왼쪽, 오른쪽 자식 노드의 경로 합을 가져옴
@@ -87,14 +87,14 @@ impl Solution {
           .as_ref()
           .map_or(0, |n| *path_sums.get(&(Rc::as_ptr(n))).unwrap_or(&0));
 
+        // 현재 노드의 경로 합을 저장
         let curr_val = node.val;
         let max_child = left_sum.max(right_sum).max(0);
         let path_sum = curr_val + max_child;
+        path_sums.insert(ptr, path_sum);
 
         // 현재 노드를 포함한 경로의 합을 최대값과 비교
         max_sum = max_sum.max(curr_val + left_sum.max(0) + right_sum.max(0));
-        // 현재 노드의 경로 합을 저장
-        path_sums.insert(ptr, path_sum);
       }
     }
 
