@@ -1,0 +1,4 @@
+packages:
+  - 'harkerrank/*'
+  - 'leetcode/*'
+  - 'programmers/*'
